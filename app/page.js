@@ -164,8 +164,10 @@ function ActiveTrade({ t, price, fx }) {
 }
 
 // ---- Watchlist-Zeile ----------------------------------------------------
-function WatchRow({ w, price }) {
+function WatchRow({ w, price, onSave }) {
   const [open, setOpen] = useState(false);
+  const [editAlert, setEditAlert] = useState(w.alert ?? "");
+  const [editDir, setEditDir] = useState(w.direction || w.dir || "watch");
   const dir = w.direction || w.dir;
   let status = dir === "term" ? "term" : "watch";
   let distTxt = "—", distCol = C.dim;
@@ -181,6 +183,13 @@ function WatchRow({ w, price }) {
   }
   const arrow = dir === "up" ? "↑" : dir === "down" ? "↓" : "·";
   const sub = w.condition || w.note || "";
+  const edited = w._edited;
+
+  const save = () => {
+    const val = editAlert === "" ? null : parseFloat(String(editAlert).replace(",", "."));
+    onSave(w.sym, { alert: isNaN(val) ? null : val, direction: editDir });
+  };
+
   return (
     <div style={{ borderBottom: `1px solid ${C.line}` }}>
       <div onClick={() => setOpen((o) => !o)}
@@ -196,8 +205,8 @@ function WatchRow({ w, price }) {
         <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, color: price != null ? C.text : C.faint, textAlign: "right" }}>
           {price != null ? eur(price) : "–"}
         </span>
-        <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11.5, color: C.dim, textAlign: "right" }}>
-          {w.alert != null ? `${arrow} ${eur(w.alert)}` : arrow}
+        <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11.5, color: edited ? C.sage : C.dim, textAlign: "right" }}>
+          {w.alert != null ? `${arrow} ${eur(w.alert)}` : arrow}{edited ? " •" : ""}
         </span>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
           <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: distCol }}>{distTxt}</span>
@@ -205,7 +214,7 @@ function WatchRow({ w, price }) {
         </div>
       </div>
       {open && (
-        <div style={{ padding: "2px 14px 14px 76px", display: "flex", flexDirection: "column", gap: 8 }}>
+        <div style={{ padding: "2px 14px 14px 76px", display: "flex", flexDirection: "column", gap: 10 }}>
           {w.narrative && (
             <div style={{ fontSize: 12, color: C.text, fontFamily: "'Inter', sans-serif", lineHeight: 1.5 }}>
               <span style={{ color: C.steel, fontSize: 10, fontFamily: "'IBM Plex Mono', monospace", letterSpacing: 0.4 }}>NARRATIV </span>{w.narrative}
@@ -216,9 +225,33 @@ function WatchRow({ w, price }) {
               <span style={{ color: C.steel, fontSize: 10, fontFamily: "'IBM Plex Mono', monospace", letterSpacing: 0.4 }}>INDIKATOR </span>{w.indicator}
             </div>
           )}
+          {/* Alert bearbeiten */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }} onClick={(e) => e.stopPropagation()}>
+            <span style={{ color: C.steel, fontSize: 10, fontFamily: "'IBM Plex Mono', monospace", letterSpacing: 0.4 }}>ALERT</span>
+            <input value={editAlert} onChange={(e) => setEditAlert(e.target.value)} placeholder="Marke €"
+              inputMode="decimal"
+              style={{ width: 88, background: C.panel2, color: C.text, border: `1px solid ${C.line}`, borderRadius: 7, padding: "6px 9px", fontSize: 13, fontFamily: "'IBM Plex Mono', monospace" }} />
+            <select value={editDir} onChange={(e) => setEditDir(e.target.value)}
+              style={{ background: C.panel2, color: C.text, border: `1px solid ${C.line}`, borderRadius: 7, padding: "6px 9px", fontSize: 12.5, fontFamily: "'IBM Plex Mono', monospace" }}>
+              <option value="up">↑ Rückeroberung</option>
+              <option value="down">↓ Rücksetzer</option>
+              <option value="watch">· Beobachten</option>
+              <option value="term">· Termin</option>
+            </select>
+            <button onClick={save}
+              style={{ background: C.sage, color: C.bg, border: "none", borderRadius: 7, padding: "6px 13px", fontSize: 12.5, fontFamily: "'IBM Plex Mono', monospace", fontWeight: 600, cursor: "pointer" }}>
+              Speichern
+            </button>
+            {edited && (
+              <button onClick={() => onSave(w.sym, null)}
+                style={{ background: "transparent", color: C.dim, border: `1px solid ${C.line}`, borderRadius: 7, padding: "6px 11px", fontSize: 11.5, fontFamily: "'IBM Plex Mono', monospace", cursor: "pointer" }}>
+                Zurücksetzen
+              </button>
+            )}
+          </div>
           {w.tvLink && (
-            <a href={w.tvLink} target="_blank" rel="noreferrer"
-              style={{ alignSelf: "flex-start", marginTop: 2, fontSize: 11.5, fontFamily: "'IBM Plex Mono', monospace", color: C.sage, textDecoration: "none", border: `1px solid ${C.line}`, borderRadius: 7, padding: "5px 11px" }}>
+            <a href={w.tvLink} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}
+              style={{ alignSelf: "flex-start", fontSize: 11.5, fontFamily: "'IBM Plex Mono', monospace", color: C.sage, textDecoration: "none", border: `1px solid ${C.line}`, borderRadius: 7, padding: "5px 11px" }}>
               ↗ TradingView-Chart
             </a>
           )}
@@ -284,6 +317,7 @@ function Panel({ title, right, children }) {
 
 export default function App() {
   const [watch, setWatch] = useState(SEED_WATCH);
+  const [overrides, setOverrides] = useState({}); // sym -> {alert, direction} (lokal)
   const [trades, setTrades] = useState(SEED_TRADES);
   const [dataInfo, setDataInfo] = useState(null); // meta aus data.json
   const [prices, setPrices] = useState({});      // sym -> EUR
@@ -317,6 +351,8 @@ export default function App() {
 
   useEffect(() => {
     mounted.current = true;
+    // Lokale Alert-Overrides laden (vom User in der App gesetzt)
+    setOverrides(storageGet("cockpit_alert_overrides", {}) || {});
     (async () => {
       // Zentrale Datei der Wahrheit laden (im Chat gepflegt, hier nur gelesen).
       try {
@@ -347,6 +383,23 @@ export default function App() {
   }, []);
 
   const jnj = trades.find((t) => t.status === "open");
+
+  // Overrides auf die Watchlist anwenden (lokale Eingaben schlagen data.json)
+  const effectiveWatch = watch.map((w) => {
+    const o = overrides[w.sym];
+    return o ? { ...w, alert: o.alert, direction: o.direction, _edited: true } : w;
+  });
+
+  const saveAlert = (sym, patch) => {
+    setOverrides((prev) => {
+      const next = { ...prev };
+      if (patch === null) delete next[sym];         // Zurücksetzen auf data.json
+      else next[sym] = patch;
+      storageSet("cockpit_alert_overrides", next);
+      return next;
+    });
+  };
+
   const statusMeta = {
     init:    { c: C.dim,   t: "…" },
     empty:   { c: C.steel, t: "noch keine Kurse" },
@@ -408,7 +461,7 @@ export default function App() {
         <div style={{ display: "grid", gridTemplateColumns: "1.55fr 1fr", gap: 20 }}>
           <Panel title="Watchlist · 10 Titel"
             right={<span style={{ fontSize: 10.5, color: C.faint, fontFamily: "'IBM Plex Mono', monospace" }}>Kurs · Alert · Abstand</span>}>
-            <div>{watch.map((w) => <WatchRow key={w.sym} w={w} price={prices[w.sym]} />)}</div>
+            <div>{effectiveWatch.map((w) => <WatchRow key={w.sym} w={w} price={prices[w.sym]} onSave={saveAlert} />)}</div>
           </Panel>
 
           <Panel title="Journal · R-Bilanz">
