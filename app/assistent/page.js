@@ -9,7 +9,7 @@ import React from "react";
    Hinweis: Der Chat im Artifact braucht eine aktive Claude-Session im selben
    Browser. Für dich eingeloggt funktioniert er, für fremde Besucher nicht. */
 
-const EMBED_URL = "https://claude.ai/public/artifacts/37b70159-9e78-431e-b9f2-61c58d840004"; // ← hier die URL aus "Get embed code" eintragen
+const EMBED_URL = "https://claude.site/public/artifacts/37b70159-9e78-431e-b9f2-61c58d840004/embed";
 
 const C = {
   bg: "#0E1116", panel: "#161A21", line: "#262D38",
