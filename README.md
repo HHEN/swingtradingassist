@@ -43,3 +43,9 @@ vercel --prod
 - Geschlossene Trades trägst du dort mit `resultR` (z. B. `resultR: 2.1`) ins Journal ein.
 
 Analyse-Werkzeug, keine Anlageberatung.
+
+## Mit Claude besprechen
+
+Der Button „✳ Mit Claude" im Kopf kopiert den aktuellen Stand (aktiver Trade, Watchlist mit
+Kursen und Alerts) in die Zwischenablage und öffnet Claude in einem neuen Tab. Dort einfügen —
+kein API-Key, keine Zusatzkosten.

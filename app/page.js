@@ -313,6 +313,132 @@ function Panel({ title, right, children }) {
   );
 }
 
+// ---- Kontext an Claude übergeben (ohne API-Key) -------------------------
+function ClaudeButton({ watch, trade, prices, asof }) {
+  const [copied, setCopied] = useState(false);
+
+  const buildContext = () => {
+    const zeile = (w) => {
+      const p = prices[w.sym];
+      return `- ${w.sym} (${w.name}): Kurs ${p ? p.toFixed(2) + " €" : "—"} | Alert ${w.alert ?? "—"} € ${w.direction || w.dir} | ${w.condition || ""}`;
+    };
+    return [
+      `Hier mein aktueller Stand aus dem Swing-Cockpit (Value-Pullback-Framework, Kurse vom ${asof || "—"}, EUR/gettex):`,
+      "",
+      trade
+        ? `AKTIVER TRADE: ${trade.sym} — Entry ${trade.entry} €, Stop ${trade.stop} €, Ziel ${trade.target} €, Zeit-Stop ${trade.timestop}${prices[trade.sym] ? `, aktuell ${prices[trade.sym].toFixed(2)} €` : ""}`
+        : "AKTIVER TRADE: keiner",
+      "",
+      "WATCHLIST:",
+      ...watch.map(zeile),
+      "",
+      "Bitte prüf mit mir nach den fünf Stufen, ob hier ein Setup dabei ist.",
+    ].join("\n");
+  };
+
+  const go = async () => {
+    try {
+      await navigator.clipboard.writeText(buildContext());
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch { /* Clipboard evtl. blockiert */ }
+    window.open("https://claude.ai/new", "_blank", "noopener");
+  };
+
+  return (
+    <button onClick={go}
+      title="Kontext kopieren und Claude öffnen — dort einfügen"
+      style={{ background: C.panel2, color: copied ? C.sage : C.text, border: `1px solid ${copied ? C.sage : C.line}`, borderRadius: 9, padding: "9px 16px", fontSize: 13, fontFamily: "'IBM Plex Mono', monospace", cursor: "pointer" }}>
+      {copied ? "✓ kopiert" : "✳ Mit Claude"}
+    </button>
+  );
+}
+
+// ---- Framework zum Nachlesen (aufklappbar) ------------------------------
+const STUFEN = [
+  {
+    nr: "1", titel: "Was kaufen — Bewertung",
+    pruefung: "Sechs Punkte, mindestens 4/6: Forward-KGV unter Sektor-Median oder eigenem 5-Jahres-Schnitt · EV/EBITDA unter Sektor-Median · FCF-Rendite über 4 % · Net Debt/EBITDA unter 2,5 · Umsatz- und EPS-Wachstum positiv · erkennbarer Katalysator.",
+    warum: "Das Sicherheitsnetz. Ein Rücksetzer bei billiger Qualität ist ein Angebot — bei einer teuren Aktie womöglich der Anfang vom Ende. Die Wachstums- und Schuldenpunkte filtern Value-Traps: Titel, die billig aussehen, weil das Geschäft stirbt. Der Katalysator beantwortet, warum der Markt seine Meinung ändern sollte; billig allein reicht nicht.",
+  },
+  {
+    nr: "2", titel: "Wohin läuft es — Trend",
+    pruefung: "Kurs über der steigenden 50-Tage-Linie · Abfolge höherer Hochs UND höherer Tiefs · nicht unter einer fallenden 200er.",
+    warum: "Wir kaufen Schwäche nur in Stärke. Eine Aktie im Abwärtstrend kann 30 % weiter fallen, egal wie billig sie ist. Entscheidend ist die Struktur, nicht nur die rechnerisch steigende Linie — im Backtest kamen die Verluste genau dort, wo die 50er noch stieg, die Hochs aber schon fielen.",
+  },
+  {
+    nr: "3", titel: "Wann rein — Timing",
+    pruefung: "Rücksetzer auf eine definierte Unterstützung (steigende 50er, altes Ausbruchsniveau, 38–50 % Fibonacci) · RSI(14) zwischen 30 und 45 · abnehmendes Volumen im Rücksetzer · keine Earnings in den nächsten 5 Handelstagen.",
+    warum: "Stufe 1 und 2 sagen was, Stufe 3 sagt wann. Der RSI-Korridor belegt, dass der Rücksetzer echt ist (unter 45), aber kein Absturz (über 30). Die Earnings-Regel hält aus Münzwürfen raus. Und die Richtung zählt: ein Rücksetzer herab auf eine steigende Linie ist kaufbar — eine Erholung herauf an eine flache Linie nicht.",
+  },
+  {
+    nr: "4", titel: "Rechnet es sich — Risiko",
+    pruefung: "Entry-Zone an der Unterstützung · Stop unter dem Swing-Tief · Ziel 1 = letztes Verlaufshoch · CRV mindestens 2:1 · maximal 1 % Depotrisiko · Zeit-Stop nach ~20 Handelstagen.",
+    warum: "Hier wird aus einer Meinung ein Geschäft mit Zahlen. Bei 2:1 reicht eine Trefferquote von ~35 % für Profitabilität. Die 1-%-Regel sorgt dafür, dass keine Verlustserie aus dem Spiel wirft: zehn Stops in Folge kosten 10 % — ärgerlich, aber überlebbar.",
+  },
+  {
+    nr: "5", titel: "Plan festschreiben — Verdikt",
+    pruefung: "Score, Trend, Zone, Stop, Ziel, CRV und Verdikt schriftlich — inklusive Exits: raus bei Ziel, bei Stop oder nach 20 Handelstagen.",
+    warum: "Der Plan muss fertig sein, bevor Geld im Spiel ist. Sobald die Position lebt, entscheidet der Puls statt des Urteils. „Kein Trade“ ist auf jeder Stufe ein vollwertiges Ergebnis — niemals Kriterien aufweichen, um ein Setup zu erzwingen.",
+  },
+];
+
+function FrameworkPanel() {
+  const [open, setOpen] = useState(false);
+  const [aktiv, setAktiv] = useState(null);
+  return (
+    <section style={{ marginTop: 20, background: C.panel, border: `1px solid ${C.line}`, borderRadius: 14, overflow: "hidden" }}>
+      <div onClick={() => setOpen((o) => !o)}
+        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", cursor: "pointer" }}>
+        <h2 style={{ margin: 0, fontSize: 12, letterSpacing: 1.2, color: C.dim, fontFamily: "'IBM Plex Mono', monospace", fontWeight: 500, textTransform: "uppercase" }}>
+          Framework · zum Nachlesen
+        </h2>
+        <span style={{ color: C.faint, fontSize: 11, fontFamily: "'IBM Plex Mono', monospace" }}>{open ? "schließen ▴" : "öffnen ▾"}</span>
+      </div>
+
+      {open && (
+        <div style={{ borderTop: `1px solid ${C.line}`, padding: "16px 18px 20px" }}>
+          <div style={{ fontSize: 12.5, color: C.text, fontFamily: "'Inter', sans-serif", lineHeight: 1.6, marginBottom: 16 }}>
+            <strong style={{ fontFamily: "'Space Grotesk', sans-serif" }}>1 Was kaufen · 2 Wohin läuft es · 3 Wann rein · 4 Rechnet es sich · 5 Plan festschreiben.</strong><br />
+            <span style={{ color: C.dim }}>Jede Stufe kann den Trade töten, keine kann überstimmt werden.</span>
+          </div>
+
+          {STUFEN.map((s) => {
+            const auf = aktiv === s.nr;
+            return (
+              <div key={s.nr} style={{ borderTop: `1px solid ${C.line}` }}>
+                <div onClick={() => setAktiv(auf ? null : s.nr)}
+                  style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 2px", cursor: "pointer" }}>
+                  <span style={{ width: 24, height: 24, flexShrink: 0, borderRadius: 6, background: C.panel2, color: C.steel, fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center" }}>{s.nr}</span>
+                  <span style={{ flex: 1, fontSize: 13, fontFamily: "'Space Grotesk', sans-serif", fontWeight: 600 }}>{s.titel}</span>
+                  <span style={{ color: C.faint, fontSize: 10, transform: auf ? "rotate(90deg)" : "none", transition: "transform .15s" }}>▸</span>
+                </div>
+                {auf && (
+                  <div style={{ padding: "0 2px 14px 36px", display: "flex", flexDirection: "column", gap: 9 }}>
+                    <div style={{ fontSize: 12, color: C.text, lineHeight: 1.55 }}>
+                      <span style={{ color: C.sage, fontSize: 9.5, fontFamily: "'IBM Plex Mono', monospace", letterSpacing: 0.4 }}>PRÜFUNG </span>{s.pruefung}
+                    </div>
+                    <div style={{ fontSize: 12, color: C.dim, lineHeight: 1.55 }}>
+                      <span style={{ color: C.steel, fontSize: 9.5, fontFamily: "'IBM Plex Mono', monospace", letterSpacing: 0.4 }}>WARUM </span>{s.warum}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          <div style={{ borderTop: `1px solid ${C.line}`, marginTop: 4, paddingTop: 14, fontSize: 12, color: C.dim, lineHeight: 1.6 }}>
+            <span style={{ color: C.steel, fontSize: 9.5, fontFamily: "'IBM Plex Mono', monospace", letterSpacing: 0.4 }}>BEGRIFFE </span>
+            <strong style={{ color: C.text }}>R</strong> = Risiko pro Trade (Entry − Stop) als Einheit; bei 1 % Depotrisiko ist 1R der Verlust am Stop. Macht Trades vergleichbar, egal welche Größe.{" "}
+            <strong style={{ color: C.text }}>CRV</strong> = Chance zu Risiko, mindestens 2:1 — dann genügen ~35 % Treffer für Profitabilität.<br />
+            <span style={{ color: C.faint }}>Marken auf dem USD-Chart herleiten, in EUR handeln. Bei KO-Produkten: Schwelle deutlich unter dem Chart-Stop, der Stop wird im Chart gemanagt.</span>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 // ---- App ----------------------------------------------------------------
 
 export default function App() {
@@ -434,6 +560,11 @@ export default function App() {
                 Kurse {fmtDate(asof)} · EUR/USD {fx.toFixed(4)}
               </div>
             </div>
+            <a href="/assistent"
+              style={{ background: C.panel2, color: C.text, border: `1px solid ${C.line}`, borderRadius: 9, padding: "9px 14px", fontSize: 13, fontFamily: "'IBM Plex Mono', monospace", textDecoration: "none" }}>
+              ✳ Assistent
+            </a>
+            <ClaudeButton watch={effectiveWatch} trade={jnj} prices={prices} asof={asof} />
             <button onClick={load} disabled={status === "loading" || fetchedToday}
               title={fetchedToday ? "Heute bereits geholt" : "Tagesschluss abrufen"}
               style={{ background: fetchedToday ? C.panel : C.panel2, color: fetchedToday ? C.faint : C.text, border: `1px solid ${C.line}`, borderRadius: 9, padding: "9px 16px", fontSize: 13, fontFamily: "'IBM Plex Mono', monospace", cursor: status === "loading" ? "wait" : fetchedToday ? "default" : "pointer" }}>
@@ -468,6 +599,10 @@ export default function App() {
             <div style={{ padding: 18 }}><Journal trades={trades} /></div>
           </Panel>
         </div>
+
+        {/* Fußnote */}
+        {/* Framework zum Nachlesen */}
+        <FrameworkPanel />
 
         {/* Fußnote */}
         <div style={{ marginTop: 24, fontSize: 11, color: C.faint, lineHeight: 1.6, fontFamily: "'Inter', sans-serif" }}>
