@@ -1,6 +1,10 @@
 {
   "meta": {
+<<<<<<< HEAD
     "updated": "2026-07-24",
+=======
+    "updated": "2026-07-26",
+>>>>>>> Archiv-Filter für schlafende Watchlist-Titel
     "eurusd": 1.141,
     "note": "Zentrale Datei der Wahrheit fuer das Swing-Cockpit. Gepflegt im Chat, gelesen von der App. Marken auf USD-Chart hergeleitet, Anzeige in EUR (gettex)."
   },
@@ -173,6 +177,33 @@
       "indicator": "Ueber beiden Linien; auf Abkuehlung + Support-Bestaetigung ~164$ warten",
       "narrative": "Nummer 2 nach PRA-Fusion, +11% nach Q1 (Net Wins 2,9 Mrd, Book/Bill 1,42). Mittelweg zwischen IQV-Trend und MEDP-Value.",
       "tvLink": "https://www.tradingview.com/chart/?symbol=NASDAQ:ICLR"
+<<<<<<< HEAD
+=======
+    },
+    {
+      "sym": "GEN",
+      "name": "Gen Digital",
+      "sector": "KI/Tech",
+      "alert": 22.1,
+      "direction": "down",
+      "status": "watch",
+      "condition": "Ruecksetzer an steigende 50er (25,24$/~22,10€) gesucht. Kurs sitzt praktisch AUF der Linie. Earnings 06.08. — Fenster bis ~30.07.",
+      "indicator": "Ueber steigender 50er, hoehere Tiefs seit Juni; RSI 52 dreht aus ~46 hoch",
+      "narrative": "Cybersecurity (Norton/Avast), KGV 16 bei +53% Wachstum. Sauberster Screener-Treffer: Value + intakter Trend + nah an der Zone.",
+      "tvLink": "https://www.tradingview.com/chart/?symbol=NASDAQ:GEN"
+    },
+    {
+      "sym": "EXEL",
+      "name": "Exelixis",
+      "sector": "Pharma-Opp",
+      "alert": 46.5,
+      "direction": "down",
+      "status": "watch",
+      "condition": "Ruecksetzer an steigende 50er (53,05$/~46,50€) gesucht. Kurs ~4% drueber — nah, nicht in Zone. Earnings Anfang August",
+      "indicator": "Ueber steigender 50er, hoehere Tiefs seit Juni; RSI 54 leicht abkuehlend",
+      "narrative": "Profitable Onkologie-Biotech, KGV 18 bei +37% Wachstum. Screener-Treffer #2: Value + intakter Trend.",
+      "tvLink": "https://www.tradingview.com/chart/?symbol=NASDAQ:EXEL"
+>>>>>>> Archiv-Filter für schlafende Watchlist-Titel
     }
   ],
   "closedTrades": [

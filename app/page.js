@@ -164,7 +164,7 @@ function ActiveTrade({ t, price, fx }) {
 }
 
 // ---- Watchlist-Zeile ----------------------------------------------------
-function WatchRow({ w, price, onSave }) {
+function WatchRow({ w, price, onSave, onArchiv }) {
   const [open, setOpen] = useState(false);
   const [editAlert, setEditAlert] = useState(w.alert ?? "");
   const [editDir, setEditDir] = useState(w.direction || w.dir || "watch");
@@ -255,6 +255,10 @@ function WatchRow({ w, price, onSave }) {
               ↗ TradingView-Chart
             </a>
           )}
+          <button onClick={(e) => { e.stopPropagation(); onArchiv(w.sym); }}
+            style={{ alignSelf: "flex-start", background: "transparent", color: C.dim, border: `1px solid ${C.line}`, borderRadius: 7, padding: "5px 11px", fontSize: 11, fontFamily: "'IBM Plex Mono', monospace", cursor: "pointer" }}>
+            {w._archived ? "↑ In aktive Liste" : "↓ Ins Archiv"}
+          </button>
         </div>
       )}
     </div>
@@ -439,11 +443,35 @@ function FrameworkPanel() {
   );
 }
 
+<<<<<<< HEAD
+=======
+function ArchivBlock({ items, prices, onSave, onArchiv }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ borderTop: `1px solid ${C.line}` }}>
+      <div onClick={() => setOpen((o) => !o)}
+        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 14px", cursor: "pointer" }}>
+        <span style={{ fontSize: 11, color: C.faint, fontFamily: "'IBM Plex Mono', monospace", letterSpacing: 0.4 }}>
+          ARCHIV · {items.length} schlafend
+        </span>
+        <span style={{ color: C.faint, fontSize: 10, fontFamily: "'IBM Plex Mono', monospace" }}>{open ? "▴" : "▾"}</span>
+      </div>
+      {open && (
+        <div style={{ opacity: 0.55 }}>
+          {items.map((w) => <WatchRow key={w.sym} w={w} price={prices[w.sym]} onSave={onSave} onArchiv={onArchiv} />)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+>>>>>>> Archiv-Filter für schlafende Watchlist-Titel
 // ---- App ----------------------------------------------------------------
 
 export default function App() {
   const [watch, setWatch] = useState(SEED_WATCH);
   const [overrides, setOverrides] = useState({}); // sym -> {alert, direction} (lokal)
+  const [archiv, setArchiv] = useState([]);        // sym[] — archivierte Titel (lokal)
   const [trades, setTrades] = useState(SEED_TRADES);
   const [dataInfo, setDataInfo] = useState(null); // meta aus data.json
   const [prices, setPrices] = useState({});      // sym -> EUR
@@ -479,6 +507,7 @@ export default function App() {
     mounted.current = true;
     // Lokale Alert-Overrides laden (vom User in der App gesetzt)
     setOverrides(storageGet("cockpit_alert_overrides", {}) || {});
+    setArchiv(storageGet("cockpit_archiv", []) || []);
     (async () => {
       // Zentrale Datei der Wahrheit laden (im Chat gepflegt, hier nur gelesen).
       try {
@@ -510,11 +539,15 @@ export default function App() {
 
   const jnj = trades.find((t) => t.status === "open");
 
-  // Overrides auf die Watchlist anwenden (lokale Eingaben schlagen data.json)
-  const effectiveWatch = watch.map((w) => {
+  // Overrides + Archiv-Status auf die Watchlist anwenden (lokal gespeichert)
+  const enrich = (w) => {
     const o = overrides[w.sym];
-    return o ? { ...w, alert: o.alert, direction: o.direction, _edited: true } : w;
-  });
+    const archived = archiv.includes(w.sym);
+    return { ...w, ...(o ? { alert: o.alert, direction: o.direction, _edited: true } : {}), _archived: archived };
+  };
+  const allWatch = watch.map(enrich);
+  const effectiveWatch = allWatch.filter((w) => !w._archived);
+  const archivedWatch = allWatch.filter((w) => w._archived);
 
   const saveAlert = (sym, patch) => {
     setOverrides((prev) => {
@@ -522,6 +555,14 @@ export default function App() {
       if (patch === null) delete next[sym];         // Zurücksetzen auf data.json
       else next[sym] = patch;
       storageSet("cockpit_alert_overrides", next);
+      return next;
+    });
+  };
+
+  const toggleArchiv = (sym) => {
+    setArchiv((prev) => {
+      const next = prev.includes(sym) ? prev.filter((s) => s !== sym) : [...prev, sym];
+      storageSet("cockpit_archiv", next);
       return next;
     });
   };
@@ -590,9 +631,10 @@ export default function App() {
 
         {/* Watchlist + Journal */}
         <div style={{ display: "grid", gridTemplateColumns: "1.55fr 1fr", gap: 20 }}>
-          <Panel title="Watchlist · 10 Titel"
+          <Panel title={`Watchlist · ${effectiveWatch.length} aktiv`}
             right={<span style={{ fontSize: 10.5, color: C.faint, fontFamily: "'IBM Plex Mono', monospace" }}>Kurs · Alert · Abstand</span>}>
-            <div>{effectiveWatch.map((w) => <WatchRow key={w.sym} w={w} price={prices[w.sym]} onSave={saveAlert} />)}</div>
+            <div>{effectiveWatch.map((w) => <WatchRow key={w.sym} w={w} price={prices[w.sym]} onSave={saveAlert} onArchiv={toggleArchiv} />)}</div>
+            {archivedWatch.length > 0 && <ArchivBlock items={archivedWatch} prices={prices} onSave={saveAlert} onArchiv={toggleArchiv} />}
           </Panel>
 
           <Panel title="Journal · R-Bilanz">
