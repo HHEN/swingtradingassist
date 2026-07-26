@@ -8,9 +8,9 @@
 
 export const dynamic = "force-dynamic";
 
-// Genau 8 Kern-Titel (aktiver Trade + wichtigste Watchlist). Die restlichen
-// (NKE ohne Alert, GILD Termin, NVO Pharma-Opp) holen wir im Chat-Update.
-const SYMBOLS = ["JNJ", "NVDA", "MU", "QCOM", "ADBE", "ADI", "LULU", "RPRX"];
+// Nur die Top-Setup-Kandidaten (aktiver Trade + Titel nah an einer Kaufzone).
+// Alles andere ist im Chat-Update / Archiv und braucht keinen taeglichen Kurs.
+const SYMBOLS = ["JNJ", "NVDA", "RPRX", "GEN", "EXEL", "NVO"];
 
 export async function GET() {
   const key = process.env.TWELVEDATA_API_KEY;
