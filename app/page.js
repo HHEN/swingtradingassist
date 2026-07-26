@@ -443,8 +443,6 @@ function FrameworkPanel() {
   );
 }
 
-<<<<<<< HEAD
-=======
 function ArchivBlock({ items, prices, onSave, onArchiv }) {
   const [open, setOpen] = useState(false);
   return (
@@ -465,7 +463,6 @@ function ArchivBlock({ items, prices, onSave, onArchiv }) {
   );
 }
 
->>>>>>> Archiv-Filter für schlafende Watchlist-Titel
 // ---- App ----------------------------------------------------------------
 
 export default function App() {
