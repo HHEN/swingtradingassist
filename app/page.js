@@ -317,47 +317,6 @@ function Panel({ title, right, children }) {
   );
 }
 
-// ---- Kontext an Claude übergeben (ohne API-Key) -------------------------
-function ClaudeButton({ watch, trade, prices, asof }) {
-  const [copied, setCopied] = useState(false);
-
-  const buildContext = () => {
-    const zeile = (w) => {
-      const p = prices[w.sym];
-      return `- ${w.sym} (${w.name}): Kurs ${p ? p.toFixed(2) + " €" : "—"} | Alert ${w.alert ?? "—"} € ${w.direction || w.dir} | ${w.condition || ""}`;
-    };
-    return [
-      `Hier mein aktueller Stand aus dem Swing-Cockpit (Value-Pullback-Framework, Kurse vom ${asof || "—"}, EUR/gettex):`,
-      "",
-      trade
-        ? `AKTIVER TRADE: ${trade.sym} — Entry ${trade.entry} €, Stop ${trade.stop} €, Ziel ${trade.target} €, Zeit-Stop ${trade.timestop}${prices[trade.sym] ? `, aktuell ${prices[trade.sym].toFixed(2)} €` : ""}`
-        : "AKTIVER TRADE: keiner",
-      "",
-      "WATCHLIST:",
-      ...watch.map(zeile),
-      "",
-      "Bitte prüf mit mir nach den fünf Stufen, ob hier ein Setup dabei ist.",
-    ].join("\n");
-  };
-
-  const go = async () => {
-    try {
-      await navigator.clipboard.writeText(buildContext());
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
-    } catch { /* Clipboard evtl. blockiert */ }
-    window.open("https://claude.ai/new", "_blank", "noopener");
-  };
-
-  return (
-    <button onClick={go}
-      title="Kontext kopieren und Claude öffnen — dort einfügen"
-      style={{ background: C.panel2, color: copied ? C.sage : C.text, border: `1px solid ${copied ? C.sage : C.line}`, borderRadius: 9, padding: "9px 16px", fontSize: 13, fontFamily: "'IBM Plex Mono', monospace", cursor: "pointer" }}>
-      {copied ? "✓ kopiert" : "✳ Mit Claude"}
-    </button>
-  );
-}
-
 // ---- Framework zum Nachlesen (aufklappbar) ------------------------------
 const STUFEN = [
   {
@@ -607,11 +566,6 @@ export default function App() {
                 Kurse {fmtDate(asof)} · EUR/USD {fx.toFixed(4)}
               </div>
             </div>
-            // <a href="/assistent"
-            //   style={{ background: C.panel2, color: C.text, border: `1px solid ${C.line}`, borderRadius: 9, padding: "9px 14px", fontSize: 13, fontFamily: "'IBM Plex Mono', monospace", textDecoration: "none" }}>
-            //   ✳ Assistent
-            // </a>
-            // <ClaudeButton watch={effectiveWatch} trade={jnj} prices={prices} asof={asof} />
             <button onClick={load} disabled={status === "loading" || fetchedToday}
               title={fetchedToday ? "Heute bereits geholt" : "Tagesschluss abrufen"}
               style={{ background: fetchedToday ? C.panel : C.panel2, color: fetchedToday ? C.faint : C.text, border: `1px solid ${C.line}`, borderRadius: 9, padding: "9px 16px", fontSize: 13, fontFamily: "'IBM Plex Mono', monospace", cursor: status === "loading" ? "wait" : fetchedToday ? "default" : "pointer" }}>
