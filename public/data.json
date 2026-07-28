@@ -1,22 +1,10 @@
 {
   "meta": {
-    "updated": "2026-07-26",
+    "updated": "2026-07-28",
     "eurusd": 1.141,
     "note": "Zentrale Datei der Wahrheit fuer das Swing-Cockpit. Gepflegt im Chat, gelesen von der App. Marken auf USD-Chart hergeleitet, Anzeige in EUR (gettex)."
   },
-  "activeTrade": {
-    "sym": "JNJ",
-    "name": "Johnson & Johnson",
-    "status": "open",
-    "entry": 218.0,
-    "stop": 211.15,
-    "target": 235.55,
-    "opened": "2026-07-20",
-    "timestop": "2026-08-17",
-    "instrument": "UBS OE Turbo (KO 224,5$)",
-    "narrative": "Value-Pullback im intakten Aufwaertstrend; Rücksetzer war der Boden — dreht seit 20.07. nach oben (254$/~223€), im Plus. Earnings durch bis 20.10.",
-    "tvLink": "https://www.tradingview.com/chart/?symbol=NYSE:JNJ"
-  },
+  "activeTrade": null,
   "watchlist": [
     {
       "sym": "NVDA",
@@ -155,8 +143,8 @@
       "alert": 210.0,
       "direction": "down",
       "status": "watch",
-      "condition": "Ruecksetzer an steigende 50er abwarten. Trend intakt (+19% YoY, +10% im Monat) — einziger CRO, der Stufe 2 schon jetzt besteht",
-      "indicator": "Ueber 50er/200er, starkes Momentum; RSI-Abkuehlung an der Linie gesucht",
+      "condition": "Zug abgefahren: +11,6% Earnings-Sprung auf ~209$, RSI ~79 ueberkauft, ~27% ueber 50er. Kein Ruecksetzer in Sicht — abwarten, bis Kurs sich der 50er wieder naehert",
+      "indicator": "Stark ueberkauft nach Earnings; erst nach laengerer Konsolidierung wieder relevant",
       "narrative": "Marktfuehrer (~15,6% Anteil), Datenmonopol — am wenigsten KI-angreifbar. These: KI erhoeht Studienzahl massiv, CROs profitieren statt zu leiden.",
       "tvLink": "https://www.tradingview.com/chart/?symbol=NYSE:IQV",
       "archived": false
@@ -212,6 +200,19 @@
       "narrative": "Profitable Onkologie-Biotech, KGV 18 bei +37% Wachstum. Screener-Treffer #2: Value + intakter Trend.",
       "tvLink": "https://www.tradingview.com/chart/?symbol=NASDAQ:EXEL",
       "archived": false
+    },
+    {
+      "sym": "INGM",
+      "name": "Ingram Micro",
+      "sector": "KI/Tech",
+      "alert": 24.75,
+      "direction": "down",
+      "status": "watch",
+      "archived": false,
+      "condition": "Ruecksetzer an steigende 50er (~28,23$/24,75€). Kurs ~3% drueber. Earnings Anfang August pruefen (5-Tage-Regel)",
+      "indicator": "Ueber steigender 50er, hoehere Tiefs; RSI ~54 abkuehlend",
+      "narrative": "IT-Distributor, KGV ~8,5 bei +9,5% Umsatz, KI-Infrastruktur-Katalysator (GPUs/Server laufen ueber Distributoren). Analystenziele angehoben. Achtung: duenne Marge ~1,4%.",
+      "tvLink": "https://www.tradingview.com/chart/?symbol=NYSE:INGM"
     }
   ],
   "closedTrades": [
@@ -223,6 +224,15 @@
       "resultPct": 3.0,
       "resultR": null,
       "note": "Regellose Altposition — diszipliniert mit +~3% geschlossen, vor den August-Earnings."
+    },
+    {
+      "sym": "JNJ",
+      "name": "Johnson & Johnson",
+      "opened": "2026-07-20",
+      "closed": "2026-07-27",
+      "resultR": 2.0,
+      "resultPct": null,
+      "note": "Erster kompletter Framework-Trade. Value-Pullback via Turbo, Einstieg 2,21 € -> Verkauf 3,85 € (~+74% Turbo, ~+2R), Ziel erreicht wie geplant."
     }
   ]
 }
