@@ -607,11 +607,11 @@ export default function App() {
                 Kurse {fmtDate(asof)} · EUR/USD {fx.toFixed(4)}
               </div>
             </div>
-            <a href="/assistent"
-              style={{ background: C.panel2, color: C.text, border: `1px solid ${C.line}`, borderRadius: 9, padding: "9px 14px", fontSize: 13, fontFamily: "'IBM Plex Mono', monospace", textDecoration: "none" }}>
-              ✳ Assistent
-            </a>
-            <ClaudeButton watch={effectiveWatch} trade={jnj} prices={prices} asof={asof} />
+            // <a href="/assistent"
+            //   style={{ background: C.panel2, color: C.text, border: `1px solid ${C.line}`, borderRadius: 9, padding: "9px 14px", fontSize: 13, fontFamily: "'IBM Plex Mono', monospace", textDecoration: "none" }}>
+            //   ✳ Assistent
+            // </a>
+            // <ClaudeButton watch={effectiveWatch} trade={jnj} prices={prices} asof={asof} />
             <button onClick={load} disabled={status === "loading" || fetchedToday}
               title={fetchedToday ? "Heute bereits geholt" : "Tagesschluss abrufen"}
               style={{ background: fetchedToday ? C.panel : C.panel2, color: fetchedToday ? C.faint : C.text, border: `1px solid ${C.line}`, borderRadius: 9, padding: "9px 16px", fontSize: 13, fontFamily: "'IBM Plex Mono', monospace", cursor: status === "loading" ? "wait" : fetchedToday ? "default" : "pointer" }}>
