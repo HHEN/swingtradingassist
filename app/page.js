@@ -53,8 +53,9 @@ function storageSet(key, val) {
 }
 
 // Tagesschluss über eigene Server-Route (FMP-Key bleibt serverseitig)
-async function fetchQuotes() {
-  const res = await fetch("/api/quotes", { cache: "no-store" });
+async function fetchQuotes(symbols) {
+  const q = symbols && symbols.length ? "?symbols=" + encodeURIComponent(symbols.join(",")) : "";
+  const res = await fetch("/api/quotes" + q, { cache: "no-store" });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || ("HTTP " + res.status));
   return { prices: data.prices || {}, eurusd: data.eurusd || FX_FALLBACK, asof: data.asof || null };
@@ -503,28 +504,46 @@ export default function App() {
   const [asof, setAsof] = useState(null);        // Datum des Kursstands
   const [updated, setUpdated] = useState(null);  // Zeitpunkt des Abrufs
   const [errMsg, setErrMsg] = useState("");
+  const [batchIdx, setBatchIdx] = useState(0);   // welcher Batch als nächstes
+  const [nextReady, setNextReady] = useState(0); // Zeitpunkt ab dem der nächste Batch erlaubt ist (Minutenlimit)
   const mounted = useRef(true);
 
   const todayStr = new Date().toISOString().slice(0, 10);
   const fetchedToday = updated && updated.slice(0, 10) === todayStr;
 
-  const load = useCallback(async () => {
+  const BATCH = 8;
+
+  const loadBatch = useCallback(async (allSymbols) => {
+    const batches = [];
+    for (let i = 0; i < allSymbols.length; i += BATCH) batches.push(allSymbols.slice(i, i + BATCH));
+    if (batches.length === 0) return;
+    const idx = batchIdx % batches.length;
+    const syms = batches[idx];
+
     setStatus("loading"); setErrMsg("");
     try {
-      const { prices: raw, eurusd, asof: dt } = await fetchQuotes();
+      const { prices: raw, eurusd, asof: dt } = await fetchQuotes(syms);
       const rate = eurusd || FX_FALLBACK;
-      const eurPrices = {};
-      Object.entries(raw).forEach(([s, p]) => { if (typeof p === "number") eurPrices[s] = p / rate; });
       if (!mounted.current) return;
       const stamp = new Date().toISOString();
-      setPrices(eurPrices); setFx(rate); setAsof(dt); setUpdated(stamp); setStatus("ok");
-      storageSet("cockpit_cache", { prices: eurPrices, fx: rate, asof: dt, updated: stamp });
+      setPrices((prev) => {
+        const merged = { ...prev };
+        Object.entries(raw).forEach(([s, p]) => { if (typeof p === "number") merged[s] = p / rate; });
+        storageSet("cockpit_cache", { prices: merged, fx: rate, asof: dt, updated: stamp });
+        return merged;
+      });
+      setFx(rate); setAsof(dt); setUpdated(stamp); setStatus("ok");
+      // Nächster Batch: Index weiter, Minutensperre setzen (nur wenn es mehr Batches gibt)
+      if (batches.length > 1) {
+        setBatchIdx((idx + 1) % batches.length);
+        setNextReady(Date.now() + 61000);
+      }
     } catch (e) {
       if (!mounted.current) return;
       setStatus(Object.keys(prices).length ? "ok" : "error");
       setErrMsg(String(e.message || e));
     }
-  }, [prices]);
+  }, [batchIdx, prices]);
 
   useEffect(() => {
     mounted.current = true;
@@ -580,6 +599,21 @@ export default function App() {
   const allWatch = watch.map(enrich);
   const effectiveWatch = allWatch.filter((w) => !w._archived);
   const archivedWatch = allWatch.filter((w) => w._archived);
+
+  // Symbole aller aktiven Titel (+ aktiver Trade) für den Kursabruf
+  const activeSymbols = [
+    ...(jnj ? [jnj.sym] : []),
+    ...effectiveWatch.map((w) => w.sym),
+  ].filter((s, i, a) => s && a.indexOf(s) === i);
+  const batchCount = Math.max(1, Math.ceil(activeSymbols.length / BATCH));
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    if (nextReady <= Date.now()) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [nextReady]);
+  const waitSec = Math.max(0, Math.ceil((nextReady - now) / 1000));
+  const locked = waitSec > 0;
 
   // Kompletten Watchlist-Zustand ins Backend schreiben (nach jeder Änderung).
   const persist = (nextWatch, nextArchiv, nextOverrides) => {
@@ -662,10 +696,13 @@ export default function App() {
                 Kurse {fmtDate(asof)} · EUR/USD {fx.toFixed(4)}
               </div>
             </div>
-            <button onClick={load} disabled={status === "loading" || fetchedToday}
-              title={fetchedToday ? "Heute bereits geholt" : "Tagesschluss abrufen"}
-              style={{ background: fetchedToday ? C.panel : C.panel2, color: fetchedToday ? C.faint : C.text, border: `1px solid ${C.line}`, borderRadius: 9, padding: "9px 16px", fontSize: 13, fontFamily: "'IBM Plex Mono', monospace", cursor: status === "loading" ? "wait" : fetchedToday ? "default" : "pointer" }}>
-              {status === "loading" ? "…" : fetchedToday ? "✓ Heute geholt" : "↻ Kurse holen"}
+            <button onClick={() => loadBatch(activeSymbols)} disabled={status === "loading" || locked}
+              title={locked ? `Minutenlimit — noch ${waitSec}s` : "Kurse abrufen"}
+              style={{ background: locked ? C.panel : C.panel2, color: locked ? C.faint : C.text, border: `1px solid ${C.line}`, borderRadius: 9, padding: "9px 16px", fontSize: 13, fontFamily: "'IBM Plex Mono', monospace", cursor: status === "loading" ? "wait" : locked ? "default" : "pointer" }}>
+              {status === "loading" ? "…"
+                : locked ? `↻ nächster Batch in ${waitSec}s`
+                : batchCount > 1 ? `↻ Kurse holen (${(batchIdx % batchCount) + 1}/${batchCount})`
+                : "↻ Kurse holen"}
             </button>
           </div>
         </header>
