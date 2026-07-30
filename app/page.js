@@ -422,6 +422,73 @@ function ArchivBlock({ items, prices, onSave, onArchiv }) {
   );
 }
 
+function AddTitleForm({ onAdd }) {
+  const [open, setOpen] = useState(false);
+  const [f, setF] = useState({ sym: "", name: "", sector: "", alert: "", direction: "down", exchange: "NASDAQ" });
+  const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+
+  const submit = () => {
+    const sym = f.sym.trim().toUpperCase();
+    if (!sym) return;
+    const alertNum = f.alert === "" ? null : parseFloat(String(f.alert).replace(",", "."));
+    onAdd({
+      sym, name: f.name.trim() || sym, sector: f.sector.trim() || "—",
+      alert: isNaN(alertNum) ? null : alertNum, direction: f.direction, status: "watch",
+      condition: "", indicator: "", narrative: "",
+      tvLink: `https://www.tradingview.com/chart/?symbol=${f.exchange}:${sym}`,
+    });
+    setF({ sym: "", name: "", sector: "", alert: "", direction: "down", exchange: "NASDAQ" });
+    setOpen(false);
+  };
+
+  const inp = { background: C.panel2, color: C.text, border: `1px solid ${C.line}`, borderRadius: 7, padding: "8px 10px", fontSize: 13, fontFamily: "'IBM Plex Mono', monospace", width: "100%", boxSizing: "border-box" };
+
+  if (!open) {
+    return (
+      <div style={{ padding: "10px 14px", borderTop: `1px solid ${C.line}` }}>
+        <button onClick={() => setOpen(true)}
+          style={{ background: "transparent", color: C.steel, border: `1px dashed ${C.line}`, borderRadius: 8, padding: "8px 14px", fontSize: 12.5, fontFamily: "'IBM Plex Mono', monospace", cursor: "pointer", width: "100%" }}>
+          + Titel hinzufügen
+        </button>
+      </div>
+    );
+  }
+  return (
+    <div style={{ padding: "14px", borderTop: `1px solid ${C.line}`, display: "flex", flexDirection: "column", gap: 9 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        <input style={inp} placeholder="Symbol (z.B. MPLX)" value={f.sym} onChange={set("sym")} />
+        <input style={inp} placeholder="Name" value={f.name} onChange={set("name")} />
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        <input style={inp} placeholder="Sektor" value={f.sector} onChange={set("sector")} />
+        <input style={inp} placeholder="Alert-Marke €" inputMode="decimal" value={f.alert} onChange={set("alert")} />
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        <select style={inp} value={f.direction} onChange={set("direction")}>
+          <option value="down">↓ Rücksetzer</option>
+          <option value="up">↑ Rückeroberung</option>
+          <option value="watch">· Beobachten</option>
+        </select>
+        <select style={inp} value={f.exchange} onChange={set("exchange")}>
+          <option value="NASDAQ">NASDAQ</option>
+          <option value="NYSE">NYSE</option>
+          <option value="XETR">XETR</option>
+        </select>
+      </div>
+      <div style={{ display: "flex", gap: 8, marginTop: 2 }}>
+        <button onClick={submit}
+          style={{ background: C.sage, color: C.bg, border: "none", borderRadius: 7, padding: "8px 16px", fontSize: 13, fontFamily: "'IBM Plex Mono', monospace", fontWeight: 600, cursor: "pointer" }}>
+          Hinzufügen
+        </button>
+        <button onClick={() => setOpen(false)}
+          style={{ background: "transparent", color: C.dim, border: `1px solid ${C.line}`, borderRadius: 7, padding: "8px 14px", fontSize: 12.5, fontFamily: "'IBM Plex Mono', monospace", cursor: "pointer" }}>
+          Abbrechen
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ---- App ----------------------------------------------------------------
 
 export default function App() {
@@ -461,26 +528,26 @@ export default function App() {
 
   useEffect(() => {
     mounted.current = true;
-    // Lokale Alert-Overrides laden (vom User in der App gesetzt)
-    setOverrides(storageGet("cockpit_alert_overrides", {}) || {});
-    setArchiv(storageGet("cockpit_archiv", []) || []);
     (async () => {
-      // Zentrale Datei der Wahrheit laden (im Chat gepflegt, hier nur gelesen).
+      // 1) Watchlist-Zustand aus dem Backend (KV) laden — Titel, Archiv, Alert-Overrides.
+      try {
+        const r = await fetch("/api/watchlist", { cache: "no-store" });
+        if (r.ok) {
+          const d = await r.json();
+          if (mounted.current && d && Array.isArray(d.watchlist)) {
+            setWatch(d.watchlist);
+            setArchiv(Array.isArray(d.archiv) ? d.archiv : []);
+            setOverrides(d.overrides && typeof d.overrides === "object" ? d.overrides : {});
+          }
+        }
+      } catch { /* KV nicht erreichbar → SEED bleibt */ }
+
+      // 2) Trades + Meta weiter aus data.json (im Chat gepflegt, nur gelesen).
       try {
         const r = await fetch("/data.json", { cache: "no-store" });
         if (r.ok) {
           const d = await r.json();
           if (mounted.current && d) {
-            if (Array.isArray(d.watchlist)) {
-              setWatch(d.watchlist);
-              // In data.json als archived markierte Titel initial ins Archiv,
-              // sofern der User lokal noch nichts eigenes gesetzt hat.
-              const vorArchiviert = d.watchlist.filter((w) => w.archived).map((w) => w.sym);
-              if (vorArchiviert.length && !localStorage.getItem("cockpit_archiv")) {
-                setArchiv(vorArchiviert);
-                storageSet("cockpit_archiv", vorArchiviert);
-              }
-            }
             const built = [];
             if (d.activeTrade) built.push({ ...d.activeTrade, id: "active-" + d.activeTrade.sym, status: "open" });
             if (Array.isArray(d.closedTrades)) d.closedTrades.forEach((t, i) => built.push({ ...t, id: "closed-" + i, status: "closed" }));
@@ -489,7 +556,7 @@ export default function App() {
             if (d.meta?.eurusd) setFx(d.meta.eurusd);
           }
         }
-      } catch { /* Fallback auf SEED */ }
+      } catch { /* Fallback auf SEED-Trades */ }
 
       const cached = storageGet("cockpit_cache", null);
       if (cached) {
@@ -504,7 +571,7 @@ export default function App() {
 
   const jnj = trades.find((t) => t.status === "open");
 
-  // Overrides + Archiv-Status auf die Watchlist anwenden (lokal gespeichert)
+  // Overrides + Archiv-Status auf die Watchlist anwenden
   const enrich = (w) => {
     const o = overrides[w.sym];
     const archived = archiv.includes(w.sym);
@@ -514,12 +581,21 @@ export default function App() {
   const effectiveWatch = allWatch.filter((w) => !w._archived);
   const archivedWatch = allWatch.filter((w) => w._archived);
 
+  // Kompletten Watchlist-Zustand ins Backend schreiben (nach jeder Änderung).
+  const persist = (nextWatch, nextArchiv, nextOverrides) => {
+    fetch("/api/watchlist", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ watchlist: nextWatch, archiv: nextArchiv, overrides: nextOverrides }),
+    }).catch(() => { /* Schreibfehler nicht blockierend */ });
+  };
+
   const saveAlert = (sym, patch) => {
     setOverrides((prev) => {
       const next = { ...prev };
-      if (patch === null) delete next[sym];         // Zurücksetzen auf data.json
+      if (patch === null) delete next[sym];
       else next[sym] = patch;
-      storageSet("cockpit_alert_overrides", next);
+      persist(watch, archiv, next);
       return next;
     });
   };
@@ -527,7 +603,27 @@ export default function App() {
   const toggleArchiv = (sym) => {
     setArchiv((prev) => {
       const next = prev.includes(sym) ? prev.filter((s) => s !== sym) : [...prev, sym];
-      storageSet("cockpit_archiv", next);
+      persist(watch, next, overrides);
+      return next;
+    });
+  };
+
+  const addTitle = (t) => {
+    setWatch((prev) => {
+      if (prev.some((w) => w.sym === t.sym)) return prev; // Dublette vermeiden
+      const next = [...prev, t];
+      persist(next, archiv, overrides);
+      return next;
+    });
+  };
+
+  const removeTitle = (sym) => {
+    setWatch((prev) => {
+      const next = prev.filter((w) => w.sym !== sym);
+      const nextArchiv = archiv.filter((s) => s !== sym);
+      const nextOverrides = { ...overrides }; delete nextOverrides[sym];
+      setArchiv(nextArchiv); setOverrides(nextOverrides);
+      persist(next, nextArchiv, nextOverrides);
       return next;
     });
   };
@@ -595,6 +691,7 @@ export default function App() {
             right={<span style={{ fontSize: 10.5, color: C.faint, fontFamily: "'IBM Plex Mono', monospace" }}>Kurs · Alert · Abstand</span>}>
             <div>{effectiveWatch.map((w) => <WatchRow key={w.sym} w={w} price={prices[w.sym]} onSave={saveAlert} onArchiv={toggleArchiv} />)}</div>
             {archivedWatch.length > 0 && <ArchivBlock items={archivedWatch} prices={prices} onSave={saveAlert} onArchiv={toggleArchiv} />}
+            <AddTitleForm onAdd={addTitle} />
           </Panel>
 
           <Panel title="Journal · R-Bilanz">
