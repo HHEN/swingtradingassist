@@ -471,7 +471,7 @@ function AddTitleForm({ onAdd }) {
           <option value="watch">· Beobachten</option>
         </select>
         <select style={inp} value={f.exchange} onChange={set("exchange")}>
-          <option value="NASDAQ">NASDAQ</option>
+          <option value="gettex">Gettex</option>
           <option value="NYSE">NYSE</option>
           <option value="XETR">XETR</option>
         </select>
